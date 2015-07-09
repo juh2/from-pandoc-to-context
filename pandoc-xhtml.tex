@@ -193,24 +193,24 @@
          keyword={\xmldoifelse{#1}{p[@class='publisher']/a}
                     {\xmltext{#1}{p[@class='publisher']/a}}
                     {\xmltext{#1}{p[@class='publisher']}}}]
-    \startcoverpagemakeup
-        \setupbodyfont[svb]
-        {\setupbodyfont[25pt]\sc \xmlconcat{#1}{/h2[contains(@class,'author')]}{\\}}
-        \vfill
-        \scale[width=\textwidth]{\bf \xmltext{#1}{h1[@class='title']}}
-
-        \blank[small]\startalign [flushright]
-        \dontleavehmode\scale[width=.75\textwidth]{\it \xmltext{#1}{h1[@class='subtitle']}}
-        \stopalign
-        \vfill
-        \startalign[center]
-        \dontleavehmode\CoverImage
-        \stopalign
-        \vfill
-        \startalign[flushright]
-        \dontleavehmode\scale[width=.75\textwidth]{\xmltext{#1}{p[@class='publisher']}}
-        \stopalign
-    \stopcoverpagemakeup
+%    \startcoverpagemakeup
+%        \setupbodyfont[svb]
+%        {\setupbodyfont[25pt]\sc %\xmlconcat{#1}{/h2[contains(@class,'author')]}{\\}}
+%        \vfill
+%        \scale[width=\textwidth]{\bf \xmltext{#1}{h1[@class='title']}}
+%
+%        \blank[small]\startalign [flushright]
+%        \dontleavehmode\scale[width=.75\textwidth]{\it %\xmltext{#1}{h1[@class='subtitle']}}
+%        \stopalign
+%        \vfill
+%        \startalign[center]
+%        \dontleavehmode\CoverImage
+%        \stopalign
+%        \vfill
+%        \startalign[flushright]
+%        \dontleavehmode\scale[width=.75\textwidth]{\xmltext{#1}{p[@class='%publisher']}}
+%        \stopalign
+%    \stopcoverpagemakeup
 
     \starttitlepagemakeup
         \mbox{}\vfill
