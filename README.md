@@ -31,6 +31,7 @@ This project is still work in progress. It is forked from https://github.com/ous
 The following features were added to the original version:
 * Separate Table of Contents, Figures and Tables (TOC, TOF and TOT)
 * Tables
+* Images
 * (Fixes wherever applicable)
 
 ## License
