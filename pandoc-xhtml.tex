@@ -1,6 +1,10 @@
+\startluacode
+    usercode = usercode or {}
+\stopluacode
+
 \startxmlsetups xml:pandoc
     \xmlsetsetup{\xmldocument}
-        {html|body|div|h1|h2|h3|h4|h5|h6|p|blockquote|span|em|q|b|strong|a|ul|ol|li|dl|dt|dd|hr|br|sup|sub|code}
+        {html|body|div|h1|h2|h3|h4|h5|h6|p|blockquote|span|em|q|b|strong|a|ul|ol|li|dl|dt|dd|hr|br|sup|sub|code|img}
         {xml:*}
 
     \xmlsetsetup{\xmldocument}
@@ -209,6 +213,14 @@
 
     \xmlsetsetup{\xmldocument}
         {table/caption}
+        {}
+
+    \xmlsetsetup{\xmldocument}
+        {div[contains(@class,'figure')]}
+        {xml:img:float}
+
+    \xmlsetsetup{\xmldocument}
+        {div[contains(@class,'figure')]/p[@class='caption']}
         {}
 
 \stopxmlsetups
@@ -770,6 +782,23 @@
 
 \startxmlsetups xml:tof
     \completelistoffigures
+\stopxmlsetups
+
+\startluacode
+    function usercode.processfigure(file, t)
+        local args = utilities.parsers.settings_to_hash(t)
+        context.externalfigure({file}, args)
+    end
+\stopluacode
+
+\startxmlsetups xml:img
+    \ctxlua{usercode.processfigure("\xmlatt{#1}{src}", "\xmlatt{#1}{options}")}
+\stopxmlsetups
+
+\startxmlsetups xml:img:float
+    \placefigure[][\xmlattribute{#1}{/img}{id}]{\xmltext{#1}{/p[@class='caption']}}{
+        \xmlflush{#1}
+    }
 \stopxmlsetups
 
 %%%%%%%%%% Necessary setups for pandoc-xhtml to work
