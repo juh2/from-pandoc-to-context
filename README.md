@@ -32,6 +32,7 @@ The following features were added to the original version:
 * Separate Table of Contents, Figures and Tables (TOC, TOF and TOT)
 * Tables
 * Images
+* Unnumbered headings
 * (Fixes wherever applicable)
 
 ## License
