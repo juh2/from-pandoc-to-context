@@ -821,7 +821,14 @@
 
 \startluacode
     function usercode.processfigure(file, t)
+        -- Parse the options from our input first.
         local args = utilities.parsers.settings_to_hash(t)
+        -- We don't allow the width or height to exceed the text dimensions.
+        -- "sp" needs to be added, since dimensions are stored that way.
+        args["maxwidth"] = tex.dimen["textwidth"].."sp"
+        args["maxheight"] = tex.dimen["textheight"].."sp"
+
+        -- Finally: call externalfigure for our file with out arguments.
         context.externalfigure({file}, args)
     end
 \stopluacode
