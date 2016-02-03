@@ -397,6 +397,31 @@
     \part[\xmlattribute{#1}{..//div}{id}]{\xmlflush{#1}}
 \stopxmlsetups
 
+% Dynamically build the heading. This essentially takes the given level (>=2),
+% prepends the appropriate amount of "sub" and then decides, whether it should
+% be a section (numbered) or subject (unnumbered).
+% Therefore \createheading[4]{...} will lead to \subsubsection or \subsubsubject.
+\def\createheading[#1]#2{
+    % Setup variables
+    \edef\prefix{}
+    \newcount\X
+    \X=#1
+
+    % Subtract 2, since is is our lowest possible level which should not have
+    % any "sub" prefixed.
+    \advance \X by -2
+
+    % Iterate the given amount and prepend "sub".
+    \dorecurse{\X}{\edef\prefix{sub\prefix}}
+
+    % Decide if we want numbering or not.
+    \xmldoifelse{#2}{.[contains(@class,'unnumbered')]}{%
+        \csname\prefix subject\endcsname[\xmlatt{#2}{id}]{\xmlflush{#2}}%
+    }{%
+        \csname\prefix section\endcsname[\xmlatt{#2}{id}]{\xmlflush{#2}}%
+    }
+}
+
 \startxmlsetups xml:h1
     %~ \startchapter[bookmark={\xmltext{\xmldocument}{../h1}}, title={\xmlflush{#1}}]\stopchapter
     \xmldoifelse{#1}{.[contains(@class,'unnumbered')]}{%
@@ -412,43 +437,23 @@
 \stopxmlsetups
 
 \startxmlsetups xml:h2
-    \xmldoifelse{#1}{.[contains(@class,'unnumbered')]}{%
-        \subject[\xmlatt{#1}{id}]{\xmlflush{#1}}%
-    }{%
-        \section[\xmlatt{#1}{id}]{\xmlflush{#1}}%
-    }
+    \createheading[2]{#1}
 \stopxmlsetups
 
 \startxmlsetups xml:h3
-    \xmldoifelse{#1}{.[contains(@class,'unnumbered')]}{%
-        \subsubject[\xmlatt{#1}{id}]{\xmlflush{#1}}%
-    }{%
-        \subsection[\xmlatt{#1}{id}]{\xmlflush{#1}}%
-    }
+    \createheading[3]{#1}
 \stopxmlsetups
 
 \startxmlsetups xml:h4
-    \xmldoifelse{#1}{.[contains(@class,'unnumbered')]}{%
-        \subsubsubject[\xmlatt{#1}{id}]{\xmlflush{#1}}%
-    }{%
-        \subsubsection[\xmlatt{#1}{id}]{\xmlflush{#1}}%
-    }
+    \createheading[4]{#1}
 \stopxmlsetups
 
 \startxmlsetups xml:h5
-    \xmldoifelse{#1}{.[contains(@class,'unnumbered')]}{%
-        \subsubsubsubject[\xmlatt{#1}{id}]{\xmlflush{#1}}%
-    }{%
-        \subsubsubsection[\xmlatt{#1}{id}]{\xmlflush{#1}}%
-    }
+    \createheading[5]{#1}
 \stopxmlsetups
 
 \startxmlsetups xml:h6
-    \xmldoifelse{#1}{.[contains(@class,'unnumbered')]}{%
-        \subsubsubsubsubject[\xmlatt{#1}{id}]{\xmlflush{#1}}%
-    }{%
-        \subsubsubsubsection[\xmlatt{#1}{id}]{\xmlflush{#1}}%
-    }
+    \createheading[6]{#1}
 \stopxmlsetups
 
 \startxmlsetups xml:p
