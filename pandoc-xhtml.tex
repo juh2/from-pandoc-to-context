@@ -4,7 +4,7 @@
 
 \startxmlsetups xml:pandoc
     \xmlsetsetup{\xmldocument}
-        {html|body|div|h1|h2|h3|h4|h5|h6|p|blockquote|span|em|q|b|strong|a|ul|ol|li|dl|dt|dd|hr|br|sup|sub|code|img}
+        {html|body|div|h1|h2|h3|h4|h5|h6|p|blockquote|span|em|q|b|strong|a|ul|ol|li|dl|dt|dd|hr|br|sup|sub|code|img|EQ}
         {xml:*}
 
     \xmlsetsetup{\xmldocument}
@@ -222,6 +222,14 @@
     \xmlsetsetup{\xmldocument}
         {div[contains(@class,'figure')]/p[@class='caption']}
         {}
+
+    \xmlsetsetup{\xmldocument}
+        {span[@class='math inline']}
+        {xml:math:inline}
+
+    \xmlsetsetup{\xmldocument}
+        {EQ[@ENV='math']}
+        {xml:math:eq}
 
 \stopxmlsetups
 
@@ -841,6 +849,14 @@
     \placefigure[][\xmlattribute{#1}{/img}{id}]{\xmltext{#1}{/p[@class='caption']}}{
         \xmlflush{#1}
     }
+\stopxmlsetups
+
+\startxmlsetups xml:math:inline
+    \xmlflushcontext{#1}
+\stopxmlsetups
+
+\startxmlsetups xml:math:eq
+    \math{\xmlflushcontext{#1}}
 \stopxmlsetups
 
 %%%%%%%%%% Necessary setups for pandoc-xhtml to work
