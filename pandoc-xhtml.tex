@@ -19,6 +19,16 @@
 
 \startluacode
     usercode = usercode or {}
+    usercode.authors = usercode.authors or {}
+
+    function xml.functions.collectauthors(root)
+        print("collect authors called.")
+        for e in xml.collected(root, "/h2[contains(@class,'author')]") do
+            table.insert(usercode.authors, xml.text(e))
+            print("Inserting: "..xml.text(e))
+        end
+        print("Test: "..utilities.parsers.array_to_string(usercode.authors, ", "))
+    end
 \stopluacode
 
 \startxmlsetups xml:pandoc
@@ -283,40 +293,20 @@
     % Set variables so we can reuse them in the document.
     \setevalue{doc:title}{\xmltext{#1}{h1[@class='title']}}
     \setevalue{doc:subtitle}{\xmltext{#1}{h1[@class='subtitle']}}
+    \setevalue{doc:publisher}{\xmltext{#1}{p[@class='publisher']}}
+
+    \xmlfunction{#1}{collectauthors}
 
     % Layout the cover page
     \startfirstmatter
     \setupinteraction
-        [author={\xmlconcat{#1}{/h2[contains(@class,'author')]}{, }},
+        [author={\docauthors{, }},
          keyword={\xmldoifelse{#1}{p[@class='publisher']/a}
                     {\xmltext{#1}{p[@class='publisher']/a}}
                     {\xmltext{#1}{p[@class='publisher']}}}]
-    \startnotmode[no-coverpage]
-    \startcoverpagemakeup
-        \def\CoverPageTitle{%
-        \startmode[*en,*uk]\hiddentitle{[Cover page]}\stopmode%
-        \startmode[*es]\hiddentitle{[Portada]}\stopmode%
-        \startmode[*deo,*de,*de-de,*de-at,*de-ch]\hiddentitle{[Bildtitelseite]}\stopmode%
-        }
-        \doifdefined{hiddentitle}{\CoverPageTitle}
-        \setupbodyfont[svb]
-        {\setupbodyfont[25pt]\sc \xmlconcat{#1}{/h2[contains(@class,'author')]}{\\}}
-        \vfill
-        \scale[width=\textwidth]{\bf \getvalue{doc:title}}
-
-        \blank[small]\startalign [flushright]
-        \dontleavehmode\scale[width=.75\textwidth]{\it \getvalue{doc:subtitle}}
-        \stopalign
-        \vfill
-        \startalign[center]
-        \dontleavehmode\CoverImage
-        \stopalign
-        \vfill
-        \startalign[flushright]
-        \dontleavehmode\scale[width=.75\textwidth]{\xmltext{#1}{p[@class='publisher']}}
-        \stopalign
-    \stopcoverpagemakeup
-    \stopnotmode
+    \startmode[coverpage]
+        \makecoverpage
+    \stopmode
 
     % Layout the title page
     \starttitlepagemakeup
@@ -330,7 +320,7 @@
 
         {\itd\getvalue{doc:title}\par}\blank[big]
         {\resetbreakpoints\itb\setupinterlinespace \getvalue{doc:subtitle}\par}\blank[3*big]
-        {\sc \xmlconcat{#1}{/h2[contains(@class,'author')]}{\\}}
+        {\sc \docauthors{\crlf{}}}
 
         \vfill
         \xmltext{#1}{h3[@class='date']}
@@ -906,6 +896,37 @@
     %~ \setupalign[middle]
     \setupinterlinespace[line=2.8ex]
 \stopsectionblockenvironment
+
+\def\docauthors#1{%
+    \cldcontext{utilities.parsers.array_to_string(usercode.authors,"\luaescapestring{#1}")}
+}
+
+\def\makecoverpage{
+    \startcoverpagemakeup
+        \def\CoverPageTitle{%
+            \startmode[*en,*uk]\hiddentitle{[Cover page]}\stopmode%
+            \startmode[*es]\hiddentitle{[Portada]}\stopmode%
+            \startmode[*deo,*de,*de-de,*de-at,*de-ch]\hiddentitle{[Bildtitelseite]}\stopmode%
+        }
+        \doifdefined{hiddentitle}{\CoverPageTitle}
+        \setupbodyfont[svb]
+        {\setupbodyfont[25pt]\sc \docauthors{\crlf{}} }
+        \vfill
+        \scale[width=\textwidth]{\bf \getvalue{doc:title}}
+
+        \blank[small]\startalign [flushright]
+        \dontleavehmode\scale[width=.75\textwidth]{\it \getvalue{doc:subtitle}}
+        \stopalign
+        \vfill
+        \startalign[center]
+        \dontleavehmode\CoverImage
+        \stopalign
+        \vfill
+        \startalign[flushright]
+        \dontleavehmode\scale[width=.75\textwidth]{\getvalue{doc:publisher}}
+        \stopalign
+    \stopcoverpagemakeup
+}
 
 %%% This is a way of having a cover image
 %%% But you might want to have a new cover.
