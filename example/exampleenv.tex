@@ -1,0 +1,15 @@
+% Inherit from pandoc-xhtml ...
+\environment pandoc-xhtml
+
+% Don't enable coverpage for now.
+%\enablemode[coverpage]
+
+% Setup fonts
+\usetypescript[pagella]
+\setupbodyfont[pagella,12pt]
+
+\setuphead[chapter][page=no]
+
+% Format TABLEs
+\setupTABLE[offset=.5em]
+\setupTABLE[row][first][style=bold]
