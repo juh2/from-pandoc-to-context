@@ -1,6 +1,39 @@
+% Pandoc-XHTML is a environment for ConTeXt to transform HTML5 output from
+% pandoc into ConTeXt (to produce the final PDF).
+% Copyright (C) 2016 Pablo Rodríguez
+%                    Andreas Schneider
+%
+% This work is free software; you can redistribute it and/or
+% modify it under the terms of the GNU General Public License
+% as published by the Free Software Foundation; either version 2
+% of the License, or (at your option) any later version.
+%
+% This work is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+% GNU General Public License for more details.
+%
+% You should have received a copy of the GNU General Public License
+% along with this work; if not, write to the Free Software
+% Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
+\startluacode
+    usercode = usercode or {}
+    usercode.authors = usercode.authors or {}
+
+    function xml.functions.collectauthors(root)
+        print("collect authors called.")
+        for e in xml.collected(root, "/h2[contains(@class,'author')]") do
+            table.insert(usercode.authors, xml.text(e))
+            print("Inserting: "..xml.text(e))
+        end
+        print("Test: "..utilities.parsers.array_to_string(usercode.authors, ", "))
+    end
+\stopluacode
+
 \startxmlsetups xml:pandoc
     \xmlsetsetup{\xmldocument}
-        {html|body|div|h1|h2|h3|h4|h5|h6|p|blockquote|span|em|q|b|strong|a|ul|ol|li|dl|dt|dd|hr|br|sup|sub|code}
+        {html|body|div|h1|h2|h3|h4|h5|h6|p|blockquote|span|em|q|b|strong|a|ul|ol|li|dl|dt|dd|hr|br|sup|sub|code|img|EQ}
         {xml:*}
 
     \xmlsetsetup{\xmldocument}
@@ -36,7 +69,7 @@
         {xml:lang}
 
     \xmlsetsetup{\xmldocument}
-        {[contains(@class,'smcp') or contains(@class,'author')]}
+        {[contains(@class,'smcp')]}
         {xml:smallcaps}
 
     \xmlsetsetup{\xmldocument}
@@ -96,8 +129,23 @@
         {xml:appendices}
 
     \xmlsetsetup{\xmldocument}
-        {[@id='colophon' or @id='colofón' or contains(@class,'colophon')]}
+        {[@id='colophon' or contains(@class,'colophon')]}
         {xml:colophon}
+
+    % Table of Contents
+    \xmlsetsetup{\xmldocument}
+        {[@id='toc' or contains(@class,'toc')]}
+        {xml:toc}
+
+    % Table of Figures
+    \xmlsetsetup{\xmldocument}
+        {[@id='tof' or contains(@class,'tof')]}
+        {xml:tof}
+
+    % Table of Tables
+    \xmlsetsetup{\xmldocument}
+        {[@id='tot' or contains(@class,'tot')]}
+        {xml:tot}
 
     \xmlsetsetup{\xmldocument}
         {[@class='signature-date']}
@@ -186,6 +234,40 @@
     \xmlsetsetup{\xmldocument}
         {juh:footnotes}
         {xml:juh:footnotes}
+
+    % Table handling
+    \xmlsetsetup{\xmldocument}
+        {table|thead|tbody|tr}
+        {xml:table:*}
+
+    \xmlsetsetup{\xmldocument}
+        {th|td}
+        {xml:table:column}
+
+    \xmlsetsetup{\xmldocument}
+        {table/caption}
+        {}
+
+    \xmlsetsetup{\xmldocument}
+        {div[contains(@class,'figure')]}
+        {xml:img:float}
+
+    \xmlsetsetup{\xmldocument}
+        {div[contains(@class,'figure')]/p[@class='caption']}
+        {}
+
+    \xmlsetsetup{\xmldocument}
+        {span[@class='math inline']}
+        {xml:math:inline}
+
+    \xmlsetsetup{\xmldocument}
+        {EQ[@ENV='math']}
+        {xml:math:eq}
+
+    \xmlsetsetup{\xmldocument}
+        {div[contains(@class,'placefloats')]}
+        {xml:placefloats}
+
 \stopxmlsetups
 
 \xmlregistersetup{xml:pandoc}
@@ -212,51 +294,25 @@
 \stopxmlsetups
 
 \startxmlsetups xml:titlepage
+    % Set variables so we can reuse them in the document.
+    \setevalue{doc:title}{\xmltext{#1}{h1[@class='title']}}
+    \setevalue{doc:subtitle}{\xmltext{#1}{h1[@class='subtitle']}}
+    \setevalue{doc:publisher}{\xmltext{#1}{p[@class='publisher']}}
+
+    \xmlfunction{#1}{collectauthors}
+
+    % Layout the cover page
     \startfirstmatter
     \setupinteraction
-        [author={\xmlconcat{#1}{/h2[contains(@class,'author')]}{, }},
+        [author={\docauthors{, }},
          keyword={\xmldoifelse{#1}{p[@class='publisher']/a}
                     {\xmltext{#1}{p[@class='publisher']/a}}
                     {\xmltext{#1}{p[@class='publisher']}}}]
-    \startnotmode[no-coverpage]
-    \startcoverpagemakeup
-        \def\CoverPageTitle{%
-        \startmode[*en,*uk]\hiddentitle{[Cover page]}\stopmode%
-        \startmode[*es]\hiddentitle{[Portada]}\stopmode%
-        \startmode[*deo,*de,*de-de,*de-at,*de-ch]\hiddentitle{[Bildtitelseite]}\stopmode%
-        }
-        \doifdefined{hiddentitle}{\CoverPageTitle}
-        \setupbodyfont[svb]
-        {\setupbodyfont[25pt]\sc \xmlconcat{#1}{/h2[contains(@class,'author')]}{\\}}
-        \vfill
-        \scale[width=\textwidth]{\bf \xmltext{#1}{h1[@class='title']}}
+    \startmode[coverpage]
+        \makecoverpage
+    \stopmode
 
-        \blank[small]\startalign [flushright]
-        \dontleavehmode\scale[width=.75\textwidth]{\it \xmltext{#1}{h1[@class='subtitle']}}
-        \stopalign
-        \vfill
-        \startalign[center]
-        \dontleavehmode\CoverImage
-        \stopalign
-        \vfill
-        \startalign[flushright]
-        \dontleavehmode\scale[width=.75\textwidth]{\xmltext{#1}{p[@class='publisher']}}
-        \stopalign
-    \stopcoverpagemakeup
-    \stopnotmode
-
-%~ CoverpageAuthor
-%~ CoverpageTitle
-%~ CoverpageSubtitle
-%~ CoverpagePublisher
-%~ CoverpageDate
-
-%~ TitlepageAuthor
-%~ TitlepageTitle
-%~ TitlepageSubtitle
-%~ TitlepagePublisher
-%~ TitlepageDate
-
+    % Layout the title page
     \starttitlepagemakeup
         \def\TitlePage{%
         \startmode[*en,*uk]\hiddentitle{[Title page]}\stopmode%
@@ -266,9 +322,9 @@
         \doifdefined{hiddentitle}{\TitlePage}
         \vfill
 
-        {\itd\setupinterlinespace\xmltext{#1}{h1[@class='title']}\par}\blank[big]
-        {\resetbreakpoints\itb\setupinterlinespace \xmltext{#1}{h1[@class='subtitle']}\par}\blank[3*big]
-        {\sc \xmlconcat{#1}{/h2[contains(@class,'author')]}{\\}}
+        {\itd\getvalue{doc:title}\par}\blank[big]
+        {\resetbreakpoints\itb\setupinterlinespace \getvalue{doc:subtitle}\par}\blank[3*big]
+        {\sc \docauthors{\crlf{}}}
 
         \vfill
         \xmltext{#1}{h3[@class='date']}
@@ -372,9 +428,38 @@
     \part[\xmlattribute{#1}{..//div}{id}]{\xmlflush{#1}}
 \stopxmlsetups
 
+% Dynamically build the heading. This essentially takes the given level (>=2),
+% prepends the appropriate amount of "sub" and then decides, whether it should
+% be a section (numbered) or subject (unnumbered).
+% Therefore \createheading[4]{...} will lead to \subsubsection or \subsubsubject.
+\def\createheading[#1]#2{
+    % Setup variables
+    \edef\prefix{}
+    \newcount\X
+    \X=#1
+
+    % Subtract 2, since is is our lowest possible level which should not have
+    % any "sub" prefixed.
+    \advance \X by -2
+
+    % Iterate the given amount and prepend "sub".
+    \dorecurse{\X}{\edef\prefix{sub\prefix}}
+
+    % Decide if we want numbering or not.
+    \xmldoifelse{#2}{.[contains(@class,'unnumbered')]}{%
+        \csname\prefix subject\endcsname[\xmlatt{#2}{id}]{\xmlflush{#2}}%
+    }{%
+        \csname\prefix section\endcsname[\xmlatt{#2}{id}]{\xmlflush{#2}}%
+    }
+}
+
 \startxmlsetups xml:h1
     %~ \startchapter[bookmark={\xmltext{\xmldocument}{../h1}}, title={\xmlflush{#1}}]\stopchapter
-    \chapter[\xmlattribute{#1}{..//div}{id}]{\xmlflush{#1}}
+    \xmldoifelse{#1}{.[contains(@class,'unnumbered')]}{%
+        \title[\xmlatt{#1}{id}]{\xmlflush{#1}}%
+    }{%
+        \chapter[\xmlatt{#1}{id}]{\xmlflush{#1}}%
+    }
 \stopxmlsetups
 
 \startxmlsetups xml:hidden:h1
@@ -383,23 +468,23 @@
 \stopxmlsetups
 
 \startxmlsetups xml:h2
-    \section[\xmlattribute{#1}{..//div}{id}]{\xmlflush{#1}}
+    \createheading[2]{#1}
 \stopxmlsetups
 
 \startxmlsetups xml:h3
-    \subsection[\xmlattribute{#1}{..//div}{id}]{\xmlflush{#1}}
+    \createheading[3]{#1}
 \stopxmlsetups
 
 \startxmlsetups xml:h4
-    \subsubsection[\xmlattribute{#1}{..//div}{id}]{\xmlflush{#1}}
+    \createheading[4]{#1}
 \stopxmlsetups
 
 \startxmlsetups xml:h5
-    \subsubsubsection[\xmlattribute{#1}{..//div}{id}]{\xmlflush{#1}}
+    \createheading[5]{#1}
 \stopxmlsetups
 
 \startxmlsetups xml:h6
-    \subsubsubsubsection[\xmlattribute{#1}{..//div}{id}]{\xmlflush{#1}}
+    \createheading[6]{#1}
 \stopxmlsetups
 
 \startxmlsetups xml:p
@@ -470,7 +555,8 @@
 \stopxmlsetups
 
 \startxmlsetups xml:internal:link
-    {\em\doiftext{\in[\xmlrefatt{#1}{href}]}{\in[\xmlrefatt{#1}{href}]. }\about[\xmlrefatt{#1}{href}]}
+    \xmldoifnotselfempty{#1}{\xmlflush{#1} }
+    \in[\xmlrefatt{#1}{href}]%
 \stopxmlsetups
 
 \startxmlsetups xml:autolink
@@ -714,6 +800,147 @@
 \startxmlsetups xml:tex:logo
     \executeifdefined{\xmlflush{#1}}{{\tttf ???}}
 \stopxmlsetups
+
+%%%%%%%%%% Additions
+
+\startxmlsetups xml:table:table
+    \xmldoif{#1}{/caption/float}{%
+        \placetable%
+            [\xmlattribute{#1}{/caption/float}{options}]%
+            [\xmlattribute{#1}{/caption/float}{id}]%
+            {\xmltext{#1}{/caption}}%
+            \bgroup}
+    
+    \bTABLE
+    \xmlflush{#1}
+    \eTABLE
+
+    \xmldoif{#1}{/caption/float}{\egroup}
+\stopxmlsetups
+
+\startxmlsetups xml:table:thead
+    \bTABLEhead
+    \xmlflush{#1}
+    \eTABLEhead
+\stopxmlsetups
+
+\startxmlsetups xml:table:tbody
+    \bTABLEbody
+    \xmlflush{#1}
+    \eTABLEbody
+\stopxmlsetups
+
+\startxmlsetups xml:table:tr
+    \bTR \xmlflush{#1} \eTR
+\stopxmlsetups
+
+\startxmlsetups xml:table:column
+    \bTD \xmlflush{#1} \eTD
+\stopxmlsetups
+
+\startxmlsetups xml:toc
+    \completecontent
+\stopxmlsetups
+
+\startxmlsetups xml:tot
+    \completelistoftables
+\stopxmlsetups
+
+\startxmlsetups xml:tof
+    \completelistoffigures
+\stopxmlsetups
+
+\startluacode
+    function usercode.processfigure(file, t)
+        -- Parse the options from our input first.
+        local args = utilities.parsers.settings_to_hash(t)
+        -- We don't allow the width or height to exceed the text dimensions.
+        -- "sp" needs to be added, since dimensions are stored that way.
+        args["maxwidth"] = tex.dimen["textwidth"].."sp"
+        args["maxheight"] = tex.dimen["textheight"].."sp"
+
+        -- Finally: call externalfigure for our file with out arguments.
+        context.externalfigure({file}, args)
+    end
+\stopluacode
+
+\startxmlsetups xml:img
+    \ctxlua{usercode.processfigure("\xmlatt{#1}{src}", "\xmlatt{#1}{options}")}
+\stopxmlsetups
+
+\startxmlsetups xml:img:float
+    \placefigure[][\xmlattribute{#1}{/img}{id}]{\xmltext{#1}{/p[@class='caption']}}{
+        \xmlflush{#1}
+    }
+\stopxmlsetups
+
+\startxmlsetups xml:math:inline
+    \xmlflushcontext{#1}
+\stopxmlsetups
+
+\startxmlsetups xml:math:eq
+    \math{\xmlflushcontext{#1}}
+\stopxmlsetups
+
+\startxmlsetups xml:placefloats
+    \placefloats
+\stopxmlsetups
+
+%%%%%%%%%% Necessary setups for pandoc-xhtml to work
+\definesectionblock
+    [whatcomesfirst]
+    [firstmatter]
+
+\setupsectionblock
+    [firstmatter]
+    [page=no, after=\page]
+
+\definesectionblock
+    [tocpart]
+    [tableofcontents]
+    [number=no]
+
+\setupsectionblock
+    [tableofcontents]
+    [page=no,
+     after=\page]
+
+\startsectionblockenvironment[tocpart]
+    \setuppagenumbering[location=]
+    %~ \setupalign[middle]
+    \setupinterlinespace[line=2.8ex]
+\stopsectionblockenvironment
+
+\def\docauthors#1{%
+    \cldcontext{utilities.parsers.array_to_string(usercode.authors,"\luaescapestring{#1}")}
+}
+
+\def\makecoverpage{
+    \startcoverpagemakeup
+        \def\CoverPageTitle{%
+            \startmode[*en,*uk]\hiddentitle{[Cover page]}\stopmode%
+            \startmode[*es]\hiddentitle{[Portada]}\stopmode%
+            \startmode[*deo,*de,*de-de,*de-at,*de-ch]\hiddentitle{[Bildtitelseite]}\stopmode%
+        }
+        \doifdefined{hiddentitle}{\CoverPageTitle}
+        \setupbodyfont[svb]
+        {\setupbodyfont[25pt]\sc \docauthors{\crlf{}} }
+        \vfill
+        \scale[width=\textwidth]{\bf \getvalue{doc:title}}
+
+        \blank[small]\startalign [flushright]
+        \dontleavehmode\scale[width=.75\textwidth]{\it \getvalue{doc:subtitle}}
+        \stopalign
+        \vfill
+        \startalign[center]
+        \dontleavehmode\CoverImage
+        \stopalign
+        \vfill
+        \startalign[flushright]
+        \dontleavehmode\scale[width=.75\textwidth]{\getvalue{doc:publisher}}
+        \stopalign
+    \stopcoverpagemakeup
+}
 
 %%% This is a way of having a cover image
 %%% But you might want to have a new cover.
