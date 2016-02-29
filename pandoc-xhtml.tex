@@ -385,33 +385,17 @@
     \xmlflush{#1}
 \stopxmlsetups
 
-\startxmlsetups xml:juh:footnotes
-    \def\JUHFootnotesTitle{%
-    \startmode[*en,*uk]\chapter{Notes}\stopmode%
-    \startmode[*es]\chapter{Notas}\stopmode%
-    \startmode[*deo,*de,*de-de,*de-at,*de-ch]\chapter{Anmerkungen}\stopmode%
-    \startmode[*fr]\chapter{Notes}\stopmode}
-    \JUHFootnotesTitle\placefootnotes
-\stopxmlsetups
-
 \startxmlsetups xml:colophon
-    \doifmode{*bodypart}{\stopbodymatter}
-    \doifmode{*appendix}{\stopappendices}
-    \doifmode{*backpart}{\stopbackmatter}
-    \startlastmatter
-    \startnotmode[nofootnotes,juh:footnotes]\startmode[endnotes]
-    \def\FootnotesTitle{%
-    \startmode[*en,*uk]\chapter{Notes}\stopmode%
-    \startmode[*es]\chapter{Notas}\stopmode%
-    \startmode[*deo,*de,*de-de,*de-at,*de-ch]\chapter{Anmerkungen}\stopmode%
-    \startmode[*fr]\chapter{Notes}\stopmode}
-    \FootnotesTitle\placefootnotes
-    \stopmode\stopnotmode
+    \startbackmatter
+    \startnotmode[nofootnotes]
+    \def\Footnotes_Title{\startmode[*en]\chapter{Notes}\stopmode\startmode[*es]\chapter{Notas}\stopmode\startmode[*deo]\chapter{Notizen}\stopmode\startmode[*de]\chapter{Notizen}\stopmode\startmode[*fr]\chapter{Notes}\stopmode}
+    \Footnotes_Title\placefootnotes
+    \stopnotmode
 
     \startcolophonmakeup
     \xmlflush{#1}
     \stopcolophonmakeup
-    \stoplastmatter
+    \stopbackmatter
 \stopxmlsetups
 
 \startxmlsetups xml:div
@@ -428,63 +412,29 @@
     \part[\xmlattribute{#1}{..//div}{id}]{\xmlflush{#1}}
 \stopxmlsetups
 
-% Dynamically build the heading. This essentially takes the given level (>=2),
-% prepends the appropriate amount of "sub" and then decides, whether it should
-% be a section (numbered) or subject (unnumbered).
-% Therefore \createheading[4]{...} will lead to \subsubsection or \subsubsubject.
-\def\createheading[#1]#2{
-    % Setup variables
-    \edef\prefix{}
-    \newcount\X
-    \X=#1
-
-    % Subtract 2, since is is our lowest possible level which should not have
-    % any "sub" prefixed.
-    \advance \X by -2
-
-    % Iterate the given amount and prepend "sub".
-    \dorecurse{\X}{\edef\prefix{sub\prefix}}
-
-    % Decide if we want numbering or not.
-    \xmldoifelse{#2}{.[contains(@class,'unnumbered')]}{%
-        \csname\prefix subject\endcsname[\xmlatt{#2}{id}]{\xmlflush{#2}}%
-    }{%
-        \csname\prefix section\endcsname[\xmlatt{#2}{id}]{\xmlflush{#2}}%
-    }
-}
-
 \startxmlsetups xml:h1
     %~ \startchapter[bookmark={\xmltext{\xmldocument}{../h1}}, title={\xmlflush{#1}}]\stopchapter
-    \xmldoifelse{#1}{.[contains(@class,'unnumbered')]}{%
-        \title[\xmlatt{#1}{id}]{\xmlflush{#1}}%
-    }{%
-        \chapter[\xmlatt{#1}{id}]{\xmlflush{#1}}%
-    }
-\stopxmlsetups
-
-\startxmlsetups xml:hidden:h1
-    \doifdefined{hiddentitle}
-    {\hiddentitle[\xmlattribute{#1}{..//div}{id}]{\xmlflush{#1}}}
+    \chapter[\xmlattribute{#1}{..//div}{id}]{\xmlflush{#1}}
 \stopxmlsetups
 
 \startxmlsetups xml:h2
-    \createheading[2]{#1}
+    \section[\xmlattribute{#1}{..//div}{id}]{\xmlflush{#1}}
 \stopxmlsetups
 
 \startxmlsetups xml:h3
-    \createheading[3]{#1}
+    \subsection[\xmlattribute{#1}{..//div}{id}]{\xmlflush{#1}}
 \stopxmlsetups
 
 \startxmlsetups xml:h4
-    \createheading[4]{#1}
+    \subsubsection[\xmlattribute{#1}{..//div}{id}]{\xmlflush{#1}}
 \stopxmlsetups
 
 \startxmlsetups xml:h5
-    \createheading[5]{#1}
+    \subsubsubsection[\xmlattribute{#1}{..//div}{id}]{\xmlflush{#1}}
 \stopxmlsetups
 
 \startxmlsetups xml:h6
-    \createheading[6]{#1}
+    \subsubsubsubsection[\xmlattribute{#1}{..//div}{id}]{\xmlflush{#1}}
 \stopxmlsetups
 
 \startxmlsetups xml:p
@@ -499,20 +449,12 @@
 
 \startxmlsetups xml:blockquote
     %~ check both modes for mainlanguage and language \doifmodeelse{*en}{\blank\startnarrow\setupindenting[yes,next]\xmlflush{#1}\stopnarrow\blank}    {\blank\startnarrow\xmlflush{#1}\stopnarrow\blank}
-    \startblockquote\xmlflush{#1}\stopblockquote
+    \blank\startnarrow\xmlflush{#1}\stopnarrow\blank
 \stopxmlsetups
 
 \startxmlsetups xml:signaturedate
-    \blank[samepage, big]
     \startalign[flushright]
-        \xmlflush{#1}
-    \stopalign
-\stopxmlsetups
-
-\startxmlsetups xml:signatureauthor
-    \blank[samepage, big]
-    \startalign[flushright]
-        \bgroup\sc\xmlflush{#1}\egroup
+    \xmlflush{#1}
     \stopalign
 \stopxmlsetups
 
@@ -530,10 +472,6 @@
 
 \startxmlsetups xml:b
     \bgroup\bf\xmlflush{#1}\egroup
-\stopxmlsetups
-
-\startxmlsetups xml:smallcaps
-    \bgroup\sc\xmlflush{#1}\egroup
 \stopxmlsetups
 
 \startxmlsetups xml:pre:code
