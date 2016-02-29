@@ -457,9 +457,9 @@
 
     % Decide if we want numbering or not.
     \xmldoifelse{#2}{..[contains(@class,'unnumbered')]}{%
-        \csname\prefix subject\endcsname[\xmlatt{#2}{id}]{\xmlflush{#2}}%
+        \csname\prefix subject\endcsname[\xmlattribute{#2}{..//div}{id}]{\xmlflush{#2}}%
     }{%
-        \csname\prefix section\endcsname[\xmlatt{#2}{id}]{\xmlflush{#2}}%
+        \csname\prefix section\endcsname[\xmlattribute{#2}{..//div}{id}]{\xmlflush{#2}}%
     }
 }
 
