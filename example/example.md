@@ -2,7 +2,8 @@
 title: Example
 author:
     - Andreas Schneider
-    - Another Author
+    - Example Author 2
+    - Example Author 3
 date: 2016
 ...
 
@@ -18,6 +19,9 @@ date: 2016
 
 This document is a simple example to demonstrate some of the features
 of my pandoc-xhtml branch.
+
+Compilation using requires at least the pandoc parameters: `-S --html-q-tags --section-divs -t html`.
+For a more complete example look at the accompanying `Makefile`.
 
 # Extensions
 
@@ -43,3 +47,8 @@ Images work too:
 
 Math can be rendered TeX compatible when `--gladtex` is passed to pandoc. Then you can have nice little equations like $x^5 + \frac{4}{5}$.
 
+## Symbols
+
+You can use <span class="tex-logo">ConTeXt</span>-supplied symbol sets. For example you will see an envelope here: <span class="symbol" set="martinvogel 2">Letter</span>.
+
+(If your chosen font supports the full or at least necesary set of symbols, you might as well just use the unicode symbols directly.)

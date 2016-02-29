@@ -21,6 +21,8 @@
     usercode = usercode or {}
     usercode.authors = usercode.authors or {}
 
+    local gsub = string.gsub
+
     function xml.functions.collectauthors(root)
         print("collect authors called.")
         for e in xml.collected(root, "/h2[contains(@class,'author')]") do
@@ -28,6 +30,14 @@
             print("Inserting: "..xml.text(e))
         end
         print("Test: "..utilities.parsers.array_to_string(usercode.authors, ", "))
+    end
+
+    function xml.expressions.idstring(str)
+        return type(str) == "string" and gsub(str,"^#","") or ""
+    end
+
+    function xml.expressions.stringlength(str)
+        return string.len(str)
     end
 \stopluacode
 
@@ -264,6 +274,16 @@
         {div[contains(@class,'placefloats')]}
         {xml:placefloats}
 
+    % Skip empty h1-headings. This is handy when you want to use h1-headings for special
+    % markups. (Like starting the frontmatter.)
+    \xmlsetsetup{\xmldocument}
+        {h1[stringlength(text()) == 0]}
+        {-}
+
+    \xmlsetsetup{\xmldocument}
+        {span[contains(@class,'symbol')]}
+        {xml:tex:symbol}
+
 \stopxmlsetups
 
 \xmlregistersetup{xml:pandoc}
@@ -436,7 +456,7 @@
     \dorecurse{\X}{\edef\prefix{sub\prefix}}
 
     % Decide if we want numbering or not.
-    \xmldoifelse{#2}{.[contains(@class,'unnumbered')]}{%
+    \xmldoifelse{#2}{..[contains(@class,'unnumbered')]}{%
         \csname\prefix subject\endcsname[\xmlatt{#2}{id}]{\xmlflush{#2}}%
     }{%
         \csname\prefix section\endcsname[\xmlatt{#2}{id}]{\xmlflush{#2}}%
@@ -558,13 +578,6 @@
          \xmlflush{#1}
      \stopfootnote
 \stopxmlsetups
-
-\startluacode
-     local gsub = string.gsub
-     function xml.expressions.idstring(str)
-         return type(str) == "string" and gsub(str,"^#","") or ""
-     end
-\stopluacode
 
 \startnotmode[nofootnotes]
 \startxmlsetups xml:footnote:ref
@@ -870,6 +883,10 @@
 
 \startxmlsetups xml:placefloats
     \placefloats
+\stopxmlsetups
+
+\startxmlsetups xml:tex:symbol
+    \symbol[\xmlatt{#1}{set}][\xmlflush{#1}]
 \stopxmlsetups
 
 %%%%%%%%%% Necessary setups for pandoc-xhtml to work
