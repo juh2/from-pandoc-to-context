@@ -39,6 +39,11 @@
     function xml.expressions.stringlength(str)
         return string.len(str)
     end
+
+    function xml.expressions.match(str,pattern)
+        print(str.." -- "..pattern)
+        return type(str) == "string" and string.match(str,pattern) ~= nil
+    end
 \stopluacode
 
 \startxmlsetups xml:pandoc
@@ -69,6 +74,12 @@
     \xmlsetsetup{\xmldocument}
         {head/meta[@name='author']}
         {xml:doc:author}
+
+    % Handle section-divs (div/h*)
+    \xmlsetsetup{\xmldocument}
+        %{div[contains(@class,'level')]/[match(name(),'h[0-9]+')]}
+        {div[contains(@class,'level')]}
+        {xml:sectiondiv}
 
     \xmlsetsetup{\xmldocument}
         {h2[contains(@class,'author')]}
@@ -314,6 +325,7 @@
     \setevalue{doc:title}{\xmltext{#1}{h1[@class='title']}}
     \setevalue{doc:subtitle}{\xmltext{#1}{h1[@class='subtitle']}}
     \setevalue{doc:publisher}{\xmltext{#1}{p[@class='publisher']}}
+    \setevalue{doc:date}{\xmltext{#1}{h3[@class='date']}}
 
     \xmlfunction{#1}{collectauthors}
 
@@ -329,24 +341,7 @@
     \stopmode
 
     % Layout the title page
-    \starttitlepagemakeup
-        \def\TitlePage{%
-        \startmode[*en,*uk]\hiddentitle{[Title page]}\stopmode%
-        \startmode[*es]\hiddentitle{[Título]}\stopmode%
-        \startmode[*deo,*de,*de-de,*de-at,*de-ch]\hiddentitle{[Titelseite]}\stopmode%
-        }
-        \doifdefined{hiddentitle}{\TitlePage}
-        \vfill
-
-        {\itd\getvalue{doc:title}\par}\blank[big]
-        {\resetbreakpoints\itb\setupinterlinespace \getvalue{doc:subtitle}\par}\blank[3*big]
-        {\sc \docauthors{\crlf{}}}
-
-        \vfill
-        \xmltext{#1}{h3[@class='date']}
-        \vfill
-        \xmltext{#1}{p[@class='publisher']}
-    \stoptitlepagemakeup
+    \maketitlepage
 \stopxmlsetups
 
 \startxmlsetups xml:rights
@@ -462,6 +457,51 @@
         \csname\prefix section\endcsname[\xmlattribute{#2}{..//div}{id}]{\xmlflush{#2}}%
     }
 }
+
+\startluacode
+function xml.functions.process_section_div(t)
+    local element = lxml.getid(t)
+    local level = tonumber(string.match(element.at["class"], "level([0-9]+)"))
+    local unnumbered = string.match(element.at["class"], "unnumbered")
+    local headtype = ""
+    local prefix = ""
+
+    local title = xml.text(element, "h"..level)
+
+    -- we don't need the h* element anymore. remove it so it won't get flushed.
+    xml.delete(element, "h"..level)
+
+    if string.len(title) == 0 then
+        return
+    end
+
+    if level == 1 then
+        if unnumbered ~= nil then
+            headtype = "title"
+        else
+            headtype = "chapter"
+        end
+    else
+        if unnumbered ~= nil then
+            headtype = "subject"
+        else
+            headtype = "section"
+        end
+
+        for i = 3, level do
+            prefix = prefix.."sub"
+        end
+    end
+
+    context["start"..prefix..headtype]{title = title, reference = element.at["id"]}
+    lxml.flush(t)
+    context["stop"..prefix..headtype]()
+end
+\stopluacode
+
+\startxmlsetups xml:sectiondiv
+    \xmlfunction{#1}{process_section_div}
+\stopxmlsetups
 
 \startxmlsetups xml:h1
     %~ \startchapter[bookmark={\xmltext{\xmldocument}{../h1}}, title={\xmlflush{#1}}]\stopchapter
@@ -943,6 +983,27 @@
         \dontleavehmode\scale[width=.75\textwidth]{\getvalue{doc:publisher}}
         \stopalign
     \stopcoverpagemakeup
+}
+
+\def\maketitlepage{
+    \starttitlepagemakeup
+        \def\TitlePage{%
+        \startmode[*en,*uk]\hiddentitle{[Title page]}\stopmode%
+        \startmode[*es]\hiddentitle{[Título]}\stopmode%
+        \startmode[*deo,*de,*de-de,*de-at,*de-ch]\hiddentitle{[Titelseite]}\stopmode%
+        }
+        \doifdefined{hiddentitle}{\TitlePage}
+        \vfill
+
+        {\itd\getvalue{doc:title}\par}\blank[big]
+        {\resetbreakpoints\itb\setupinterlinespace \getvalue{doc:subtitle}\par}\blank[3*big]
+        {\sc \docauthors{\crlf{}}}
+
+        \vfill
+        \getvalue{doc:date}
+        \vfill
+        \getvalue{doc:publisher}
+    \stoptitlepagemakeup
 }
 
 %%% This is a way of having a cover image
