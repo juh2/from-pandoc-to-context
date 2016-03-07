@@ -296,8 +296,8 @@
         {-}
 
     \xmlsetsetup{\xmldocument}
-        {span[contains(@class,'symbol')]}
-        {xml:tex:symbol}
+        {div[@class='centered']}
+        {xml:centeredblock}
 
 \stopxmlsetups
 
@@ -368,6 +368,12 @@
 
 \startxmlsetups xml:frontmatter
     \doifmode{*whatcomesfirst}{\stopfirstmatter}
+    \startfirstmatter
+    \starttableofcontents
+    \title{\headtext{content}}
+    \placelist[part,chapter]
+    \stoptableofcontents
+    \stopfirstmatter
 
     \startfrontmatter
     \xmlflush{#1}
@@ -864,7 +870,7 @@ end
             [\xmlattribute{#1}{/caption/float}{id}]%
             {\xmltext{#1}{/caption}}%
             \bgroup}
-    
+
     \bTABLE
     \xmlflush{#1}
     \eTABLE
@@ -940,8 +946,8 @@ end
     \placefloats
 \stopxmlsetups
 
-\startxmlsetups xml:tex:symbol
-    \symbol[\xmlatt{#1}{set}][\xmlflush{#1}]
+\startxmlsetups xml:centeredblock
+    \startalign[center]\xmlflush{#1}\stopalign
 \stopxmlsetups
 
 %%%%%%%%%% Necessary setups for pandoc-xhtml to work
