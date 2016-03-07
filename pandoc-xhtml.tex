@@ -268,6 +268,11 @@
         {div[contains(@class,'placefloats')]}
         {xml:placefloats}
 
+
+    \xmlsetsetup{\xmldocument}
+        {div[@class='centered']}
+        {xml:centeredblock}
+
 \stopxmlsetups
 
 \xmlregistersetup{xml:pandoc}
@@ -748,7 +753,7 @@
             [\xmlattribute{#1}{/caption/float}{id}]%
             {\xmltext{#1}{/caption}}%
             \bgroup}
-    
+
     \bTABLE
     \xmlflush{#1}
     \eTABLE
@@ -822,6 +827,10 @@
 
 \startxmlsetups xml:placefloats
     \placefloats
+\stopxmlsetups
+
+\startxmlsetups xml:centeredblock
+    \startalign[center]\xmlflush{#1}\stopalign
 \stopxmlsetups
 
 %%%%%%%%%% Necessary setups for pandoc-xhtml to work
