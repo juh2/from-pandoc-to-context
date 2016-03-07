@@ -21,6 +21,8 @@
     usercode = usercode or {}
     usercode.authors = usercode.authors or {}
 
+    local gsub = string.gsub
+
     function xml.functions.collectauthors(root)
         print("collect authors called.")
         for e in xml.collected(root, "/h2[contains(@class,'author')]") do
@@ -28,6 +30,19 @@
             print("Inserting: "..xml.text(e))
         end
         print("Test: "..utilities.parsers.array_to_string(usercode.authors, ", "))
+    end
+
+    function xml.expressions.idstring(str)
+        return type(str) == "string" and gsub(str,"^#","") or ""
+    end
+
+    function xml.expressions.stringlength(str)
+        return string.len(str)
+    end
+
+    function xml.expressions.match(str,pattern)
+        print(str.." -- "..pattern)
+        return type(str) == "string" and string.match(str,pattern) ~= nil
     end
 \stopluacode
 
@@ -59,6 +74,12 @@
     \xmlsetsetup{\xmldocument}
         {head/meta[@name='author']}
         {xml:doc:author}
+
+    % Handle section-divs (div/h*)
+    \xmlsetsetup{\xmldocument}
+        %{div[contains(@class,'level')]/[match(name(),'h[0-9]+')]}
+        {div[contains(@class,'level')]}
+        {xml:sectiondiv}
 
     \xmlsetsetup{\xmldocument}
         {h2[contains(@class,'author')]}
@@ -268,6 +289,16 @@
         {div[contains(@class,'placefloats')]}
         {xml:placefloats}
 
+    % Skip empty h1-headings. This is handy when you want to use h1-headings for special
+    % markups. (Like starting the frontmatter.)
+    \xmlsetsetup{\xmldocument}
+        {h1[stringlength(text()) == 0]}
+        {-}
+
+    \xmlsetsetup{\xmldocument}
+        {span[contains(@class,'symbol')]}
+        {xml:tex:symbol}
+
 \stopxmlsetups
 
 \xmlregistersetup{xml:pandoc}
@@ -298,6 +329,7 @@
     \setevalue{doc:title}{\xmltext{#1}{h1[@class='title']}}
     \setevalue{doc:subtitle}{\xmltext{#1}{h1[@class='subtitle']}}
     \setevalue{doc:publisher}{\xmltext{#1}{p[@class='publisher']}}
+    \setevalue{doc:date}{\xmltext{#1}{h3[@class='date']}}
 
     \xmlfunction{#1}{collectauthors}
 
@@ -313,24 +345,7 @@
     \stopmode
 
     % Layout the title page
-    \starttitlepagemakeup
-        \def\TitlePage{%
-        \startmode[*en,*uk]\hiddentitle{[Title page]}\stopmode%
-        \startmode[*es]\hiddentitle{[Título]}\stopmode%
-        \startmode[*deo,*de,*de-de,*de-at,*de-ch]\hiddentitle{[Titelseite]}\stopmode%
-        }
-        \doifdefined{hiddentitle}{\TitlePage}
-        \vfill
-
-        {\itd\getvalue{doc:title}\par}\blank[big]
-        {\resetbreakpoints\itb\setupinterlinespace \getvalue{doc:subtitle}\par}\blank[3*big]
-        {\sc \docauthors{\crlf{}}}
-
-        \vfill
-        \xmltext{#1}{h3[@class='date']}
-        \vfill
-        \xmltext{#1}{p[@class='publisher']}
-    \stoptitlepagemakeup
+    \maketitlepage
 \stopxmlsetups
 
 \startxmlsetups xml:rights
@@ -353,12 +368,6 @@
 
 \startxmlsetups xml:frontmatter
     \doifmode{*whatcomesfirst}{\stopfirstmatter}
-    \startfirstmatter
-    \starttableofcontents
-    \title{\headtext{content}}
-    \placelist[part,chapter]
-    \stoptableofcontents
-    \stopfirstmatter
 
     \startfrontmatter
     \xmlflush{#1}
@@ -385,17 +394,33 @@
     \xmlflush{#1}
 \stopxmlsetups
 
+\startxmlsetups xml:juh:footnotes
+    \def\JUHFootnotesTitle{%
+    \startmode[*en,*uk]\chapter{Notes}\stopmode%
+    \startmode[*es]\chapter{Notas}\stopmode%
+    \startmode[*deo,*de,*de-de,*de-at,*de-ch]\chapter{Anmerkungen}\stopmode%
+    \startmode[*fr]\chapter{Notes}\stopmode}
+    \JUHFootnotesTitle\placefootnotes
+\stopxmlsetups
+
 \startxmlsetups xml:colophon
-    \startbackmatter
-    \startnotmode[nofootnotes]
-    \def\Footnotes_Title{\startmode[*en]\chapter{Notes}\stopmode\startmode[*es]\chapter{Notas}\stopmode\startmode[*deo]\chapter{Notizen}\stopmode\startmode[*de]\chapter{Notizen}\stopmode\startmode[*fr]\chapter{Notes}\stopmode}
-    \Footnotes_Title\placefootnotes
-    \stopnotmode
+    \doifmode{*bodypart}{\stopbodymatter}
+    \doifmode{*appendix}{\stopappendices}
+    \doifmode{*backpart}{\stopbackmatter}
+    \startlastmatter
+    \startnotmode[nofootnotes,juh:footnotes]\startmode[endnotes]
+    \def\FootnotesTitle{%
+    \startmode[*en,*uk]\chapter{Notes}\stopmode%
+    \startmode[*es]\chapter{Notas}\stopmode%
+    \startmode[*deo,*de,*de-de,*de-at,*de-ch]\chapter{Anmerkungen}\stopmode%
+    \startmode[*fr]\chapter{Notes}\stopmode}
+    \FootnotesTitle\placefootnotes
+    \stopmode\stopnotmode
 
     \startcolophonmakeup
     \xmlflush{#1}
     \stopcolophonmakeup
-    \stopbackmatter
+    \stoplastmatter
 \stopxmlsetups
 
 \startxmlsetups xml:div
@@ -412,29 +437,108 @@
     \part[\xmlattribute{#1}{..//div}{id}]{\xmlflush{#1}}
 \stopxmlsetups
 
+% Dynamically build the heading. This essentially takes the given level (>=2),
+% prepends the appropriate amount of "sub" and then decides, whether it should
+% be a section (numbered) or subject (unnumbered).
+% Therefore \createheading[4]{...} will lead to \subsubsection or \subsubsubject.
+\def\createheading[#1]#2{
+    % Setup variables
+    \edef\prefix{}
+    \newcount\X
+    \X=#1
+
+    % Subtract 2, since is is our lowest possible level which should not have
+    % any "sub" prefixed.
+    \advance \X by -2
+
+    % Iterate the given amount and prepend "sub".
+    \dorecurse{\X}{\edef\prefix{sub\prefix}}
+
+    % Decide if we want numbering or not.
+    \xmldoifelse{#2}{..[contains(@class,'unnumbered')]}{%
+        \csname\prefix subject\endcsname[\xmlattribute{#2}{..//div}{id}]{\xmlflush{#2}}%
+    }{%
+        \csname\prefix section\endcsname[\xmlattribute{#2}{..//div}{id}]{\xmlflush{#2}}%
+    }
+}
+
+\startluacode
+function xml.functions.process_section_div(t)
+    local element = lxml.getid(t)
+    local level = tonumber(string.match(element.at["class"], "level([0-9]+)"))
+    local unnumbered = string.match(element.at["class"], "unnumbered")
+    local headtype = ""
+    local prefix = ""
+
+    local title = xml.text(element, "h"..level)
+
+    -- we don't need the h* element anymore. remove it so it won't get flushed.
+    xml.delete(element, "h"..level)
+
+    if string.len(title) == 0 then
+        return
+    end
+
+    if level == 1 then
+        if unnumbered ~= nil then
+            headtype = "title"
+        else
+            headtype = "chapter"
+        end
+    else
+        if unnumbered ~= nil then
+            headtype = "subject"
+        else
+            headtype = "section"
+        end
+
+        for i = 3, level do
+            prefix = prefix.."sub"
+        end
+    end
+
+    context["start"..prefix..headtype]{title = title, reference = element.at["id"]}
+    lxml.flush(t)
+    context["stop"..prefix..headtype]()
+end
+\stopluacode
+
+\startxmlsetups xml:sectiondiv
+    \xmlfunction{#1}{process_section_div}
+\stopxmlsetups
+
 \startxmlsetups xml:h1
     %~ \startchapter[bookmark={\xmltext{\xmldocument}{../h1}}, title={\xmlflush{#1}}]\stopchapter
-    \chapter[\xmlattribute{#1}{..//div}{id}]{\xmlflush{#1}}
+    \xmldoifelse{#1}{.[contains(@class,'unnumbered')]}{%
+        \title[\xmlatt{#1}{id}]{\xmlflush{#1}}%
+    }{%
+        \chapter[\xmlatt{#1}{id}]{\xmlflush{#1}}%
+    }
+\stopxmlsetups
+
+\startxmlsetups xml:hidden:h1
+    \doifdefined{hiddentitle}
+    {\hiddentitle[\xmlattribute{#1}{..//div}{id}]{\xmlflush{#1}}}
 \stopxmlsetups
 
 \startxmlsetups xml:h2
-    \section[\xmlattribute{#1}{..//div}{id}]{\xmlflush{#1}}
+    \createheading[2]{#1}
 \stopxmlsetups
 
 \startxmlsetups xml:h3
-    \subsection[\xmlattribute{#1}{..//div}{id}]{\xmlflush{#1}}
+    \createheading[3]{#1}
 \stopxmlsetups
 
 \startxmlsetups xml:h4
-    \subsubsection[\xmlattribute{#1}{..//div}{id}]{\xmlflush{#1}}
+    \createheading[4]{#1}
 \stopxmlsetups
 
 \startxmlsetups xml:h5
-    \subsubsubsection[\xmlattribute{#1}{..//div}{id}]{\xmlflush{#1}}
+    \createheading[5]{#1}
 \stopxmlsetups
 
 \startxmlsetups xml:h6
-    \subsubsubsubsection[\xmlattribute{#1}{..//div}{id}]{\xmlflush{#1}}
+    \createheading[6]{#1}
 \stopxmlsetups
 
 \startxmlsetups xml:p
@@ -449,12 +553,20 @@
 
 \startxmlsetups xml:blockquote
     %~ check both modes for mainlanguage and language \doifmodeelse{*en}{\blank\startnarrow\setupindenting[yes,next]\xmlflush{#1}\stopnarrow\blank}    {\blank\startnarrow\xmlflush{#1}\stopnarrow\blank}
-    \blank\startnarrow\xmlflush{#1}\stopnarrow\blank
+    \startblockquote\xmlflush{#1}\stopblockquote
 \stopxmlsetups
 
 \startxmlsetups xml:signaturedate
+    \blank[samepage, big]
     \startalign[flushright]
-    \xmlflush{#1}
+        \xmlflush{#1}
+    \stopalign
+\stopxmlsetups
+
+\startxmlsetups xml:signatureauthor
+    \blank[samepage, big]
+    \startalign[flushright]
+        \bgroup\sc\xmlflush{#1}\egroup
     \stopalign
 \stopxmlsetups
 
@@ -472,6 +584,10 @@
 
 \startxmlsetups xml:b
     \bgroup\bf\xmlflush{#1}\egroup
+\stopxmlsetups
+
+\startxmlsetups xml:smallcaps
+    \bgroup\sc\xmlflush{#1}\egroup
 \stopxmlsetups
 
 \startxmlsetups xml:pre:code
@@ -824,6 +940,10 @@
     \placefloats
 \stopxmlsetups
 
+\startxmlsetups xml:tex:symbol
+    \symbol[\xmlatt{#1}{set}][\xmlflush{#1}]
+\stopxmlsetups
+
 %%%%%%%%%% Necessary setups for pandoc-xhtml to work
 \definesectionblock
     [whatcomesfirst]
@@ -878,6 +998,27 @@
         \dontleavehmode\scale[width=.75\textwidth]{\getvalue{doc:publisher}}
         \stopalign
     \stopcoverpagemakeup
+}
+
+\def\maketitlepage{
+    \starttitlepagemakeup
+        \def\TitlePage{%
+        \startmode[*en,*uk]\hiddentitle{[Title page]}\stopmode%
+        \startmode[*es]\hiddentitle{[Título]}\stopmode%
+        \startmode[*deo,*de,*de-de,*de-at,*de-ch]\hiddentitle{[Titelseite]}\stopmode%
+        }
+        \doifdefined{hiddentitle}{\TitlePage}
+        \vfill
+
+        {\itd\getvalue{doc:title}\par}\blank[big]
+        {\resetbreakpoints\itb\setupinterlinespace \getvalue{doc:subtitle}\par}\blank[3*big]
+        {\sc \docauthors{\crlf{}}}
+
+        \vfill
+        \getvalue{doc:date}
+        \vfill
+        \getvalue{doc:publisher}
+    \stoptitlepagemakeup
 }
 
 %%% This is a way of having a cover image
