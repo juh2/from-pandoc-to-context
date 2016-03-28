@@ -296,6 +296,10 @@
         {-}
 
     \xmlsetsetup{\xmldocument}
+        {span[contains(@class,'symbol')]}
+        {xml:tex:symbol}
+
+    \xmlsetsetup{\xmldocument}
         {div[@class='centered']}
         {xml:centeredblock}
 
@@ -944,6 +948,10 @@ end
 
 \startxmlsetups xml:placefloats
     \placefloats
+\stopxmlsetups
+
+\startxmlsetups xml:tex:symbol
+    \symbol[\xmlatt{#1}{set}][\xmlflush{#1}]
 \stopxmlsetups
 
 \startxmlsetups xml:centeredblock
